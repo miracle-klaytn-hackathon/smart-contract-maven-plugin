@@ -16,20 +16,21 @@ import java.util.Arrays;
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
 
-    private static final String WEB3J_ROOT = ".web3j";
-
     @Parameter(name = "inputContract", required = true)
     private String inputContract;
 
     @Parameter(name = "outputDirectory", required = true)
     private String outputDirectory;
 
+    @Parameter(name = "web3jDirectory", defaultValue = ".web3j")
+    private String web3jLocation;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("Compile Contract  " + inputContract);
         SolidityFile contract = new SolidityFile(inputContract);
         getLog().info("Attempt to find a Compatible Solidity Compiler");
-        SolcInstance contractCompiler = contract.getCompilerInstance(WEB3J_ROOT, false);
+        SolcInstance contractCompiler = contract.getCompilerInstance(web3jLocation, false);
         SolcOutput compilationOutput = contractCompiler.execute(buildCompilerArguments());
         if (compilationOutput.getExitCode() == 0) {
             getLog().info(compilationOutput.getStdOut());

@@ -14,6 +14,7 @@
             <plugin>
                 <artifactId>smart-contract-maven-plugin</artifactId>
                 <configuration>
+                    <web3jLocation>.web3j-test</web3jLocation>
                     <inputContract>./src/test/resources/contracts/Sample.sol</inputContract>
                     <outputDirectory>./src/test/resources/contracts/compiled</outputDirectory>
                 </configuration>
