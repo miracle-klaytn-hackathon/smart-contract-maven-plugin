@@ -6,11 +6,9 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.web3j.sokt.SolcArguments;
-import org.web3j.sokt.SolcInstance;
-import org.web3j.sokt.SolcOutput;
-import org.web3j.sokt.SolidityFile;
+import org.web3j.sokt.*;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
@@ -29,14 +27,28 @@ public class SolidityCompilerMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("Compile Contract  " + inputContract);
         SolidityFile contract = new SolidityFile(inputContract);
-        getLog().info("Attempt to find a Compatible Solidity Compiler");
         SolcInstance contractCompiler = contract.getCompilerInstance(web3jLocation, false);
+        SolcRelease releaseMetadata = contractCompiler.getSolcRelease();
+        if (contractCompiler.installed()) {
+            getLog().info("Found a compatible Solidity Compiler (" +
+                    releaseMetadata.getVersion() + ")");
+        } else {
+            getLog().info("This process will install a compatible Solidity Compiler (" +
+                    releaseMetadata.getVersion() + ")" + " in " + getSolcRootPath());
+        }
         SolcOutput compilationOutput = contractCompiler.execute(buildCompilerArguments());
         if (compilationOutput.getExitCode() == 0) {
             getLog().info(compilationOutput.getStdOut());
         } else {
             throw new MojoExecutionException(compilationOutput.getStdErr());
         }
+    }
+
+    private String getSolcRootPath() {
+        return Paths.get(
+                System.getProperty("user.home"),
+                web3jLocation,
+                "solc").toString();
     }
 
     private SolcArguments[] buildCompilerArguments() {
