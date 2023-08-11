@@ -8,11 +8,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class SolidityCompilerMojoTest {
 
@@ -42,8 +39,11 @@ public class SolidityCompilerMojoTest {
     }
 
     private void assertContractCompiled() {
-        File file = new File(COMPILED_CONTRACT);
-        assertTrue(file.exists());
+        File compiledFolder = new File(COMPILED_CONTRACT);
+        File[] files = compiledFolder.listFiles((dir, name) ->
+                name.endsWith(".bin") || name.endsWith(".abi"));
+        assertNotNull(files);
+        assertEquals(2, files.length);
     }
 
 }
