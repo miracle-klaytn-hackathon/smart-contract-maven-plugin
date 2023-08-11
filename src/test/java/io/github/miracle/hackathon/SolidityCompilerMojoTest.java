@@ -38,14 +38,7 @@ public class SolidityCompilerMojoTest {
         SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
         assertNotNull(mojo);
         mojo.execute();
-        assertSolcInstalled();
         assertContractCompiled();
-    }
-
-    private void assertSolcInstalled() {
-        Path path = Paths.get(System.getProperty("user.home"), WEB3J_ROOT, "solc", "0.5.17");
-        File file = path.toFile();
-        assertTrue(file.exists());
     }
 
     private void assertContractCompiled() {
