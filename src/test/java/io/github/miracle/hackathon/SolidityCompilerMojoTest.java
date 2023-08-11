@@ -17,7 +17,7 @@ public class SolidityCompilerMojoTest {
 
     private static final String WEB3J_ROOT = ".web3j";
 
-    private static final String COMPILED_CONTRACT = "src/test/resources/contracts/compiled";
+    private static final String CONTRACT_OUT = "src/test/resources/contracts/out";
 
     @Rule
     public MojoRule mojoRule = new MojoRule();
@@ -25,7 +25,7 @@ public class SolidityCompilerMojoTest {
     @AfterClass
     public static void cleanUp() throws IOException {
         FileDeleteStrategy.FORCE.delete(new File(System.getProperty("user.home"), WEB3J_ROOT));
-        FileDeleteStrategy.FORCE.delete(new File(COMPILED_CONTRACT));
+        FileDeleteStrategy.FORCE.delete(new File(CONTRACT_OUT));
     }
 
     @Test
@@ -39,7 +39,7 @@ public class SolidityCompilerMojoTest {
     }
 
     private void assertContractCompiled() {
-        File compiledFolder = new File(COMPILED_CONTRACT);
+        File compiledFolder = new File(CONTRACT_OUT);
         File[] files = compiledFolder.listFiles((dir, name) ->
                 name.endsWith(".bin") || name.endsWith(".abi"));
         assertNotNull(files);

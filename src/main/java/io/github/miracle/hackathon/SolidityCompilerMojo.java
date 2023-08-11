@@ -17,10 +17,10 @@ public class SolidityCompilerMojo extends AbstractMojo {
     @Parameter(name = "inputContract", required = true)
     private String inputContract;
 
-    @Parameter(name = "outputDirectory", required = true)
-    private String outputDirectory;
+    @Parameter(name = "outputFolder", required = true)
+    private String outputFolder;
 
-    @Parameter(name = "web3jDirectory", defaultValue = ".web3j")
+    @Parameter(name = "web3jLocation", defaultValue = ".web3j")
     private String web3jLocation;
 
     @Override
@@ -56,7 +56,7 @@ public class SolidityCompilerMojo extends AbstractMojo {
                 SolcArguments.BIN,
                 SolcArguments.ABI,
                 SolcArguments.OVERWRITE,
-                SolcArguments.OUTPUT_DIR.param(() -> outputDirectory)
+                SolcArguments.OUTPUT_DIR.param(() -> outputFolder)
         ).toArray(new SolcArguments[0]);
     }
 
