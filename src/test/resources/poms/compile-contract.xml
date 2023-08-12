@@ -18,7 +18,9 @@
                 </goals>
                 <configuration>
                     <web3jLocation>.web3j-test</web3jLocation>
-                    <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
+                    <inputContracts>
+                        <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
+                    </inputContracts>
                     <generateBin>true</generateBin>
                     <generateAbi>true</generateAbi>
                     <tempLocation>src/test/resources/contracts/out</tempLocation>

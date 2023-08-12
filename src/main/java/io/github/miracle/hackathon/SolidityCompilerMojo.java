@@ -17,8 +17,11 @@ import java.util.*;
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
 
-    @Parameter(name = "inputContract", required = true)
-    protected String inputContract;
+    @Parameter(name = "solcVersion")
+    private String solcVersion;
+
+    @Parameter(name = "inputContracts", required = true)
+    protected List<String> inputContracts;
 
     @Parameter(name = "outputConfig", required = true)
     protected GeneratorOutputConfig outputConfig;
@@ -41,7 +44,14 @@ public class SolidityCompilerMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (!generateAbi && !generateBin) return;
-        compileSolidityContract(Path.of(inputContract), Path.of(tempLocation));
+        List<SolidityFile> solidityFiles = new ArrayList<>();
+        for (String path : inputContracts) {
+            solidityFiles.add(new SolidityFile(path));
+        }
+        if (solcVersion == null) {
+            solcVersion = solidityFiles.get(0).getVersionPragma();
+        }
+        compileSolidityContract(solcVersion, solidityFiles, tempLocation);
         moveToOutputFolder();
     }
 
@@ -58,16 +68,16 @@ public class SolidityCompilerMojo extends AbstractMojo {
         }
     }
 
-    /**
-     * Compile contract by executing solc process.
-     *
-     * @param inputContractPath Path to Solidity Contract.
-     * @throws MojoExecutionException if contract failed to compile.
-     */
-    protected void compileSolidityContract(Path inputContractPath, Path outputPath) throws MojoExecutionException {
-        getLog().info("Compile Contract  " + inputContractPath);
-        SolidityFile contract = new SolidityFile(inputContractPath.toString());
-        SolcInstance contractCompiler = contract.getCompilerInstance(web3jLocation, false);
+    protected void compileSolidityContract(
+            String solcVersion,
+            List<SolidityFile> inputContracts,
+            String outputPath) throws MojoExecutionException {
+        getLog().info("Compile Contract(s)  " + inputContracts);
+        SolcInstance contractCompiler = new SolcInstance(
+                getSolcRelease(solcVersion),
+                web3jLocation,
+                false,
+                inputContracts.toArray(new SolidityFile[0]));
         SolcRelease releaseMetadata = contractCompiler.getSolcRelease();
         if (contractCompiler.installed()) {
             getLog().info("Found a compatible Solidity Compiler (" +
@@ -85,13 +95,21 @@ public class SolidityCompilerMojo extends AbstractMojo {
         }
     }
 
-    private Set<SolcArguments> getCompilerArguments(Path outputPath) {
+    private SolcRelease getSolcRelease(String solcVersion) throws MojoExecutionException {
+        SolcRelease solcRelease = new VersionResolver(web3jLocation)
+                .getLatestCompatibleVersion(solcVersion);
+        if (solcRelease == null)
+            throw new MojoExecutionException("Could not determine a compatible Solc version ");
+        return solcRelease;
+    }
+
+    private Set<SolcArguments> getCompilerArguments(String outputPath) {
         Set<SolcArguments> compilerArguments = getCompilerArguments(solcArguments);
         List<SolcArguments> requiredArguments = List.of(
                 SolcArguments.BIN,
                 SolcArguments.ABI,
                 SolcArguments.OVERWRITE,
-                SolcArguments.OUTPUT_DIR.param(outputPath::toString));
+                SolcArguments.OUTPUT_DIR.param(() -> outputPath));
         for (SolcArguments argument : requiredArguments) {
             if (!compilerArguments.add(argument)) {
                 getLog().debug(argument.getBaseArg() + "is override by compiler argument");
