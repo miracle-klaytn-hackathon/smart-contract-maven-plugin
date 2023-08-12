@@ -75,6 +75,26 @@ public class SolidityCompilerMojoTest {
         assertContractCompiled(CONTRACT_OUT, 2);
     }
 
+    @Test
+    public void shouldOverrideAbiOutputConfig() throws Exception {
+        File file = new File(SRC_TEST_RESOURCES_POMS, "override-output-abi.xml");
+        assertTrue(file.exists());
+        SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
+        assertNotNull(mojo);
+        mojo.execute();
+        assertContractCompiled(CONTRACT_OVERRIDE, 1);
+    }
+
+    @Test
+    public void shouldOverrideBinOutputConfig() throws Exception {
+        File file = new File(SRC_TEST_RESOURCES_POMS, "override-output-bin.xml");
+        assertTrue(file.exists());
+        SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
+        assertNotNull(mojo);
+        mojo.execute();
+        assertContractCompiled(CONTRACT_OVERRIDE, 1);
+    }
+
     private void assertContractCompiled(String outputFolder, int expectAmount) {
         File compiledFolder = new File(outputFolder);
         File[] files = compiledFolder.listFiles((dir, name) ->

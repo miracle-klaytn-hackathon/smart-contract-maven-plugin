@@ -11,11 +11,16 @@ import org.web3j.sokt.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
+
+    private static final String ABI_EXTENSION = "abi";
+    private static final String BIN_EXTENSION = "bin";
 
     @Parameter(name = "solcVersion")
     private String solcVersion;
@@ -56,24 +61,12 @@ public class SolidityCompilerMojo extends AbstractMojo {
         if (solcVersion == null) {
             solcVersion = inputSolidityContracts.get(0).getVersionPragma();
         }
-        compileSolidityContract(solcVersion, overrideSolcArgs, inputSolidityContracts, tempLocation);
-        if (overrideSolcArgs == null) moveToOutputFolder();
+        Path compiledFolder = compileSolidityContract(solcVersion, overrideSolcArgs, inputSolidityContracts, tempLocation);
+        getLog().info("Compiled Contract to " + compiledFolder);
+        if (overrideSolcArgs == null) moveToOutputFolder(compiledFolder);
     }
 
-    private void moveToOutputFolder() throws MojoExecutionException {
-        try {
-            if (generateAbi) {
-                Files.move(Path.of(tempLocation), Path.of(outputConfig.getAbiOutput()));
-            }
-            if (generateBin) {
-                Files.move(Path.of(tempLocation), Path.of(outputConfig.getBinOutput()));
-            }
-        } catch (IOException exception) {
-            throw new MojoExecutionException(exception);
-        }
-    }
-
-    protected void compileSolidityContract(
+    protected Path compileSolidityContract(
             String solcVersion,
             String overrideArgs,
             List<SolidityFile> inputContracts,
@@ -94,18 +87,18 @@ public class SolidityCompilerMojo extends AbstractMojo {
         }
         Set<SolcArguments> compilerArguments = getCompilerArguments(overrideArgs, outputPath);
         SolcOutput compilationOutput = contractCompiler.execute(compilerArguments.toArray(new SolcArguments[0]));
-        if (compilationOutput.getExitCode() == 0) {
-            getLog().info(compilationOutput.getStdOut());
-        } else {
+        if (compilationOutput.getExitCode() != 0) {
             throw new MojoExecutionException(compilationOutput.getStdErr());
         }
+        getLog().debug(compilationOutput.getStdOut());
+        return getCompiledPath(compilerArguments);
     }
 
     private SolcRelease getSolcRelease(String solcVersion) throws MojoExecutionException {
         SolcRelease solcRelease = new VersionResolver(web3jLocation)
                 .getLatestCompatibleVersion(solcVersion);
         if (solcRelease == null)
-            throw new MojoExecutionException("Could not determine a compatible Solc version ");
+            throw new MojoExecutionException("Could not determine a compatible Solc version");
         return solcRelease;
     }
 
@@ -156,6 +149,47 @@ public class SolidityCompilerMojo extends AbstractMojo {
                 SolcArguments.ABI,
                 SolcArguments.OVERWRITE,
                 SolcArguments.OUTPUT_DIR.param(() -> outputPath));
+    }
+
+    private static Path getCompiledPath(Set<SolcArguments> compilerArguments) throws MojoExecutionException {
+        for (SolcArguments argument : compilerArguments) {
+            if (argument == SolcArguments.OUTPUT_DIR) {
+                assert argument.getParams() != null;
+                return Path.of(argument.getParams().invoke());
+            }
+        }
+        throw new MojoExecutionException("Could not get Compiled Path");
+    }
+
+    protected void moveToOutputFolder(Path compiledFolder) throws MojoExecutionException {
+        if (generateAbi) moveSources(
+                compiledFolder,
+                ABI_EXTENSION,
+                Path.of(outputConfig.getAbiOutput()));
+        if (generateBin) moveSources(
+                compiledFolder,
+                BIN_EXTENSION,
+                Path.of(outputConfig.getBinOutput()));
+    }
+
+    private void moveSources(Path root, String extension, Path targetFolder) throws MojoExecutionException {
+        PathMatcher matcher = path -> path.toString().endsWith(extension);
+        try (Stream<Path> found = Files.find(root, Integer.MAX_VALUE,
+                (path, attr) -> attr.isRegularFile() && matcher.matches(path))) {
+            found.forEach(source -> moveSource(source, targetFolder));
+        } catch (IOException exception) {
+            throw new MojoExecutionException(exception);
+        }
+    }
+
+    private void moveSource(Path sourceFile, Path targetFolder) {
+        try {
+            Files.createDirectories(targetFolder);
+            Files.move(sourceFile, targetFolder.resolve(sourceFile.getFileName()));
+        } catch (IOException e) {
+            getLog().error("Could not move "
+                    + sourceFile.toString() + " Reason " + e.getMessage());
+        }
     }
 
 }
