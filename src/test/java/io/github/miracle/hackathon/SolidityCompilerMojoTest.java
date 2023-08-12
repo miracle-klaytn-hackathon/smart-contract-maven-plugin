@@ -55,6 +55,16 @@ public class SolidityCompilerMojoTest {
         assertContractCompiled(CONTRACT_OVERRIDE, 1);
     }
 
+    @Test
+    public void shouldOverrideCompilerVersion() throws Exception {
+        File file = new File(SRC_TEST_RESOURCES_POMS, "override-solc-version.xml");
+        assertTrue(file.exists());
+        SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
+        assertNotNull(mojo);
+        mojo.execute();
+        assertContractCompiled(CONTRACT_OUT, 2);
+    }
+
     private void assertContractCompiled(String outputFolder, int expectAmount) {
         File compiledFolder = new File(outputFolder);
         File[] files = compiledFolder.listFiles((dir, name) ->
