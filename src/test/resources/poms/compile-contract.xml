@@ -13,10 +13,19 @@
         <plugins>
             <plugin>
                 <artifactId>smart-contract-maven-plugin</artifactId>
+                <goals>
+                    <goal>compile-contract</goal>
+                </goals>
                 <configuration>
                     <web3jLocation>.web3j-test</web3jLocation>
-                    <inputContract>./src/test/resources/contracts/Sample.sol</inputContract>
-                    <outputFolder>./src/test/resources/contracts/out</outputFolder>
+                    <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
+                    <generateBin>true</generateBin>
+                    <generateAbi>true</generateAbi>
+                    <tempLocation>src/test/resources/contracts/out</tempLocation>
+                    <outputConfig>
+                        <abiOutput>src/test/resources/contracts/out</abiOutput>
+                        <binOutput>src/test/resources/contracts/out</binOutput>
+                    </outputConfig>
                 </configuration>
             </plugin>
         </plugins>
