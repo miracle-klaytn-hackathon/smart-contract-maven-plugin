@@ -6,7 +6,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.jetbrains.annotations.NotNull;
 import org.web3j.sokt.*;
 
 import java.io.IOException;
@@ -34,7 +33,7 @@ public class SolidityCompilerMojo extends AbstractMojo {
     protected boolean generateAbi;
 
     @Parameter(name = "overrideSolcArgs")
-    protected Map<String, String> overrideSolcArgs;
+    protected String overrideSolcArgs;
 
     @Parameter(name = "web3jLocation", defaultValue = ".web3j")
     protected String web3jLocation;
@@ -58,7 +57,7 @@ public class SolidityCompilerMojo extends AbstractMojo {
             solcVersion = inputSolidityContracts.get(0).getVersionPragma();
         }
         compileSolidityContract(solcVersion, overrideSolcArgs, inputSolidityContracts, tempLocation);
-        moveToOutputFolder();
+        if (overrideSolcArgs == null) moveToOutputFolder();
     }
 
     private void moveToOutputFolder() throws MojoExecutionException {
@@ -76,7 +75,7 @@ public class SolidityCompilerMojo extends AbstractMojo {
 
     protected void compileSolidityContract(
             String solcVersion,
-            Map<String, String> overrideArgs,
+            String overrideArgs,
             List<SolidityFile> inputContracts,
             String outputPath) throws MojoExecutionException {
         SolcInstance contractCompiler = new SolcInstance(
@@ -85,7 +84,7 @@ public class SolidityCompilerMojo extends AbstractMojo {
                 false,
                 inputContracts.toArray(new SolidityFile[0]));
         SolcRelease releaseMetadata = contractCompiler.getSolcRelease();
-        String solcRootPath = getSolcRootPath();
+        String solcRootPath = getSolcRootPath(web3jLocation);
         if (contractCompiler.installed()) {
             getLog().info("Found a compatible Solidity Compiler (" +
                     releaseMetadata.getVersion() + ")" + " in " + solcRootPath);
@@ -110,51 +109,53 @@ public class SolidityCompilerMojo extends AbstractMojo {
         return solcRelease;
     }
 
-    private String getSolcRootPath() {
+    private static String getSolcRootPath(String web3jLocation) {
         return Paths.get(
                 System.getProperty("user.home"),
                 web3jLocation,
                 "solc").toString();
     }
 
-    private static Set<SolcArguments> getCompilerArguments(Map<String, String> overrideArgs, String outputPath) {
+    private static Set<SolcArguments> getCompilerArguments(String overrideArgs, String outputPath) {
         if (overrideArgs != null) return getOverrideArguments(overrideArgs);
         return getDefaultArguments(outputPath);
     }
 
-    @NotNull
+    private static Set<SolcArguments> getOverrideArguments(String solcArguments) {
+        String[] args = solcArguments.split("\\s+");
+        return parseArguments(args);
+    }
+
+    private static Set<SolcArguments> parseArguments(String[] args) {
+        Set<SolcArguments> arguments = new HashSet<>();
+        Map<String, SolcArguments> knownArguments = getKnownArguments();
+        SolcArguments currentArgument = null;
+        for (String arg : args) {
+            if (arg.startsWith("--")
+                    && (currentArgument = knownArguments.get(arg)) != null) {
+                arguments.add(currentArgument);
+            } else if (currentArgument != null) {
+                currentArgument.param(() -> arg); // Add value to the argument
+                currentArgument = null;
+            }
+        }
+        return arguments;
+    }
+
+    private static Map<String, SolcArguments> getKnownArguments() {
+        Map<String, SolcArguments> knownArguments = new HashMap<>();
+        for (SolcArguments solcArg : SolcArguments.values()) {
+            knownArguments.put(solcArg.getBaseArg(), solcArg);
+        }
+        return knownArguments;
+    }
+
     private static Set<SolcArguments> getDefaultArguments(String outputPath) {
         return Set.of(
                 SolcArguments.BIN,
                 SolcArguments.ABI,
                 SolcArguments.OVERWRITE,
                 SolcArguments.OUTPUT_DIR.param(() -> outputPath));
-    }
-
-    private static Set<SolcArguments> getOverrideArguments(Map<String, String> solcArguments) {
-        Set<SolcArguments> compilerArguments = new HashSet<>();
-        Map<String, SolcArguments> simplifiedBaseArgs = getSimplifiedBaseArgs();
-        solcArguments.forEach((argName, argValue) -> {
-            if (simplifiedBaseArgs.containsKey(argName)) {
-                SolcArguments argument = simplifiedBaseArgs.get(argName);
-                compilerArguments.add(argument.param(() -> argValue));
-            }
-        });
-        return compilerArguments;
-    }
-
-    private static Map<String, SolcArguments> getSimplifiedBaseArgs() {
-        Map<String, SolcArguments> simplifiedBaseArgs = new HashMap<>();
-        for (SolcArguments arg : SolcArguments.values()) {
-            String simplified = simplifyBaseArg(arg.getBaseArg());
-            simplifiedBaseArgs.put(simplified, arg);
-        }
-        return simplifiedBaseArgs;
-    }
-
-    private static String simplifyBaseArg(String baseArg) {
-        // Remove "--" from base arg
-        return baseArg.substring(2);
     }
 
 }
