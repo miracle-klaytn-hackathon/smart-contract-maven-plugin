@@ -46,6 +46,16 @@ public class SolidityCompilerMojoTest {
     }
 
     @Test
+    public void shouldCompileMultipleContracts() throws Exception {
+        File file = new File(SRC_TEST_RESOURCES_POMS, "compile-contract-multiple.xml");
+        assertTrue(file.exists());
+        SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
+        assertNotNull(mojo);
+        mojo.execute();
+        assertContractCompiled(CONTRACT_OUT, 4);
+    }
+
+    @Test
     public void shouldOverrideDefaultCompilerArguments() throws Exception {
         File file = new File(SRC_TEST_RESOURCES_POMS, "override-compiler-arguments.xml");
         assertTrue(file.exists());
