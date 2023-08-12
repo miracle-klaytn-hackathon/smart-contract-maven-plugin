@@ -21,8 +21,10 @@
                     <inputContracts>
                         <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
                     </inputContracts>
+                    <!-- Force default configuration https://stackoverflow.com/a/34611440 -->
                     <generateBin>true</generateBin>
                     <generateAbi>true</generateAbi>
+                    <!-- End -->
                     <tempLocation>src/test/resources/contracts/out</tempLocation>
                     <outputConfig>
                         <abiOutput>src/test/resources/contracts/out</abiOutput>
