@@ -18,6 +18,16 @@ import java.util.*;
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
 
+    private static final String DEFAULT_JAVA_OUTPUT =
+            "${project.build.directory}/generate-sources/java/generated";
+    private static final String DEFAULT_SOLIDITY_BIN_OUTPUT =
+            "${project.build.directory}/generate-resources/solidity/generated/bin";
+    private static final String DEFAULT_SOLIDITY_ABI_OUTPUT =
+            "${project.build.directory}/generate-resources/solidity/generated/abi";
+    private static final String DEFAULT_TEMP_OUTPUT =
+            "${project.build.directory}/generate-resources/solidity/generated/temp";
+    private static final String DEFAULT_WEB3J_FOLDER = ".web3j";
+
     private static final String ABI_EXTENSION = "abi";
     private static final String BIN_EXTENSION = "bin";
 
@@ -27,8 +37,14 @@ public class SolidityCompilerMojo extends AbstractMojo {
     @Parameter(name = "inputContracts", required = true)
     protected List<String> inputContracts;
 
-    @Parameter(name = "outputConfig", required = true)
-    protected GeneratorOutputConfig outputConfig;
+    @Parameter(name = "javaOutput", defaultValue = DEFAULT_JAVA_OUTPUT)
+    private String javaOutput;
+
+    @Parameter(name = "binOutput", defaultValue = DEFAULT_SOLIDITY_BIN_OUTPUT)
+    private String binOutput;
+
+    @Parameter(name = "abiOutput", defaultValue = DEFAULT_SOLIDITY_ABI_OUTPUT)
+    private String abiOutput;
 
     @Parameter(name = "generateBin", defaultValue = "true")
     protected boolean generateBin;
@@ -39,10 +55,10 @@ public class SolidityCompilerMojo extends AbstractMojo {
     @Parameter(name = "overrideSolcArgs")
     protected String overrideSolcArgs;
 
-    @Parameter(name = "web3jLocation", defaultValue = ".web3j")
+    @Parameter(name = "web3jLocation", defaultValue = DEFAULT_WEB3J_FOLDER)
     protected String web3jLocation;
 
-    @Parameter(name = "tempLocation", defaultValue = "temp")
+    @Parameter(name = "tempLocation", defaultValue = DEFAULT_TEMP_OUTPUT)
     protected String tempLocation;
 
     @Override
@@ -168,11 +184,11 @@ public class SolidityCompilerMojo extends AbstractMojo {
         if (generateAbi) moveSources(
                 compiledFolder,
                 ABI_EXTENSION,
-                new File(outputConfig.getAbiOutput()));
+                new File(abiOutput));
         if (generateBin) moveSources(
                 compiledFolder,
                 BIN_EXTENSION,
-                new File(outputConfig.getBinOutput()));
+                new File(binOutput));
         forceDelete(compiledFolder);
     }
 

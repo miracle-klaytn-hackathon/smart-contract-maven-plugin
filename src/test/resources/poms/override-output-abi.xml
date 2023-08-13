@@ -26,9 +26,7 @@
                     <!-- End -->
                     <generateBin>false</generateBin>
                     <tempLocation>src/test/resources/contracts/out</tempLocation>
-                    <outputConfig>
-                        <abiOutput>src/test/resources/override</abiOutput>
-                    </outputConfig>
+                    <abiOutput>src/test/resources/override</abiOutput>
                 </configuration>
             </plugin>
         </plugins>

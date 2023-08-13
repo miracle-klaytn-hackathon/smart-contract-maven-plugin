@@ -26,11 +26,9 @@
                     <generateAbi>true</generateAbi>
                     <!-- End -->
                     <tempLocation>src/test/resources/contracts/out</tempLocation>
-                    <outputConfig>
-                        <abiOutput>src/test/resources/contracts/out</abiOutput>
-                        <binOutput>src/test/resources/contracts/out</binOutput>
-                    </outputConfig>
                     <overrideSolcArgs>--bin --output-dir src/test/resources/override</overrideSolcArgs>
+                    <abiOutput>src/test/resources/contracts/out</abiOutput>
+                    <binOutput>src/test/resources/contracts/out</binOutput>
                 </configuration>
             </plugin>
         </plugins>
