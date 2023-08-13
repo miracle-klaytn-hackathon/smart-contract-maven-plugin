@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import static org.junit.Assert.*;
 
-public class SolidityCompilerMojoTest {
+public class ContractCompilerMojoTest {
 
     private static final String SRC_TEST_RESOURCES_POMS = "src/test/resources/poms/";
     private static final String WEB3J_ROOT = ".web3j";

@@ -8,12 +8,18 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.web3j.sokt.*;
+import org.web3j.sokt.SolcArguments;
+import org.web3j.sokt.SolidityFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+import static io.github.miracle.hackathon.ContractCompiler.createCompiler;
+import static io.github.miracle.hackathon.ContractCompiler.parseArguments;
 
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
@@ -90,94 +96,13 @@ public class SolidityCompilerMojo extends AbstractMojo {
             String overrideArgs,
             List<SolidityFile> inputContracts,
             String outputPath) throws MojoExecutionException {
-        SolcInstance contractCompiler = new SolcInstance(
-                getSolcRelease(solcVersion),
-                web3jLocation,
-                false,
-                inputContracts.toArray(new SolidityFile[0]));
-        SolcRelease releaseMetadata = contractCompiler.getSolcRelease();
-        String solcRootPath = getSolcRootPath(web3jLocation);
-        if (contractCompiler.installed()) {
-            getLog().info("Found a compatible Solidity Compiler (" +
-                    releaseMetadata.getVersion() + ")" + " in " + solcRootPath);
-        } else {
-            getLog().info("This process will install a compatible Solidity Compiler (" +
-                    releaseMetadata.getVersion() + ")" + " in " + solcRootPath);
+        try {
+            ContractCompiler contractCompiler = createCompiler(web3jLocation, solcVersion);
+            Set<SolcArguments> compilerArguments = parseArguments(overrideArgs, outputPath);
+            return contractCompiler.compile(inputContracts, compilerArguments);
+        } catch (Exception exception) {
+            throw new MojoExecutionException(exception);
         }
-        Set<SolcArguments> compilerArguments = getCompilerArguments(overrideArgs, outputPath);
-        SolcOutput compilationOutput = contractCompiler.execute(compilerArguments.toArray(new SolcArguments[0]));
-        if (compilationOutput.getExitCode() != 0) {
-            throw new MojoExecutionException(compilationOutput.getStdErr());
-        }
-        getLog().debug(compilationOutput.getStdOut());
-        return getCompiledPath(compilerArguments);
-    }
-
-    private SolcRelease getSolcRelease(String solcVersion) throws MojoExecutionException {
-        SolcRelease solcRelease = new VersionResolver(web3jLocation)
-                .getLatestCompatibleVersion(solcVersion);
-        if (solcRelease == null)
-            throw new MojoExecutionException("Could not determine a compatible Solc version");
-        return solcRelease;
-    }
-
-    private static String getSolcRootPath(String web3jLocation) {
-        return Paths.get(
-                System.getProperty("user.home"),
-                web3jLocation,
-                "solc").toString();
-    }
-
-    private static Set<SolcArguments> getCompilerArguments(String overrideArgs, String outputPath) {
-        if (overrideArgs != null) return getOverrideArguments(overrideArgs);
-        return getDefaultArguments(outputPath);
-    }
-
-    private static Set<SolcArguments> getOverrideArguments(String solcArguments) {
-        String[] args = solcArguments.split("\\s+");
-        return parseArguments(args);
-    }
-
-    private static Set<SolcArguments> parseArguments(String[] args) {
-        Set<SolcArguments> arguments = new HashSet<>();
-        Map<String, SolcArguments> knownArguments = getKnownArguments();
-        SolcArguments currentArgument = null;
-        for (String arg : args) {
-            if (arg.startsWith("--")
-                    && (currentArgument = knownArguments.get(arg)) != null) {
-                arguments.add(currentArgument);
-            } else if (currentArgument != null) {
-                currentArgument.param(() -> arg); // Add value to the argument
-                currentArgument = null;
-            }
-        }
-        return arguments;
-    }
-
-    private static Map<String, SolcArguments> getKnownArguments() {
-        Map<String, SolcArguments> knownArguments = new HashMap<>();
-        for (SolcArguments solcArg : SolcArguments.values()) {
-            knownArguments.put(solcArg.getBaseArg(), solcArg);
-        }
-        return knownArguments;
-    }
-
-    private static Set<SolcArguments> getDefaultArguments(String outputPath) {
-        return Set.of(
-                SolcArguments.BIN,
-                SolcArguments.ABI,
-                SolcArguments.OVERWRITE,
-                SolcArguments.OUTPUT_DIR.param(() -> outputPath));
-    }
-
-    private static File getCompiledPath(Set<SolcArguments> compilerArguments) throws MojoExecutionException {
-        for (SolcArguments argument : compilerArguments) {
-            if (argument == SolcArguments.OUTPUT_DIR) {
-                assert argument.getParams() != null;
-                return new File(argument.getParams().invoke());
-            }
-        }
-        throw new MojoExecutionException("Could not get Compiled Path");
     }
 
     protected void moveToOutputFolder(File compiledFolder) throws MojoExecutionException {
