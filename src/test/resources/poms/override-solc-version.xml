@@ -26,7 +26,7 @@
                     <generateAbi>true</generateAbi>
                     <!-- End -->
                     <solcVersion>0.5.15</solcVersion>
-                    <tempLocation>src/test/resources/contracts/out</tempLocation>
+                    <tempLocation>src/test/resources/contracts/temp</tempLocation>
                     <outputConfig>
                         <abiOutput>src/test/resources/contracts/out</abiOutput>
                         <binOutput>src/test/resources/contracts/out</binOutput>

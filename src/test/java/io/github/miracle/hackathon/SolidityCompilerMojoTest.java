@@ -15,9 +15,7 @@ import static org.junit.Assert.*;
 public class SolidityCompilerMojoTest {
 
     private static final String SRC_TEST_RESOURCES_POMS = "src/test/resources/poms/";
-
     private static final String WEB3J_ROOT = ".web3j";
-
     private static final String CONTRACT_OUT = "src/test/resources/contracts/out";
     public static final String CONTRACT_OVERRIDE = "src/test/resources/override";
 

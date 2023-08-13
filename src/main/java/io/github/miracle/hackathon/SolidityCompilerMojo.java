@@ -1,5 +1,7 @@
 package io.github.miracle.hackathon;
 
+import org.apache.commons.io.FileDeleteStrategy;
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -8,13 +10,10 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.web3j.sokt.*;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Stream;
 
 @Mojo(name = "compile-contract", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class SolidityCompilerMojo extends AbstractMojo {
@@ -61,12 +60,16 @@ public class SolidityCompilerMojo extends AbstractMojo {
         if (solcVersion == null) {
             solcVersion = inputSolidityContracts.get(0).getVersionPragma();
         }
-        Path compiledFolder = compileSolidityContract(solcVersion, overrideSolcArgs, inputSolidityContracts, tempLocation);
+        File compiledFolder = compileSolidityContract(
+                solcVersion,
+                overrideSolcArgs,
+                inputSolidityContracts,
+                tempLocation);
         getLog().info("Compiled Contract to " + compiledFolder);
         if (overrideSolcArgs == null) moveToOutputFolder(compiledFolder);
     }
 
-    protected Path compileSolidityContract(
+    protected File compileSolidityContract(
             String solcVersion,
             String overrideArgs,
             List<SolidityFile> inputContracts,
@@ -151,44 +154,47 @@ public class SolidityCompilerMojo extends AbstractMojo {
                 SolcArguments.OUTPUT_DIR.param(() -> outputPath));
     }
 
-    private static Path getCompiledPath(Set<SolcArguments> compilerArguments) throws MojoExecutionException {
+    private static File getCompiledPath(Set<SolcArguments> compilerArguments) throws MojoExecutionException {
         for (SolcArguments argument : compilerArguments) {
             if (argument == SolcArguments.OUTPUT_DIR) {
                 assert argument.getParams() != null;
-                return Path.of(argument.getParams().invoke());
+                return new File(argument.getParams().invoke());
             }
         }
         throw new MojoExecutionException("Could not get Compiled Path");
     }
 
-    protected void moveToOutputFolder(Path compiledFolder) throws MojoExecutionException {
+    protected void moveToOutputFolder(File compiledFolder) throws MojoExecutionException {
         if (generateAbi) moveSources(
                 compiledFolder,
                 ABI_EXTENSION,
-                Path.of(outputConfig.getAbiOutput()));
+                new File(outputConfig.getAbiOutput()));
         if (generateBin) moveSources(
                 compiledFolder,
                 BIN_EXTENSION,
-                Path.of(outputConfig.getBinOutput()));
+                new File(outputConfig.getBinOutput()));
+        forceDelete(compiledFolder);
     }
 
-    private void moveSources(Path root, String extension, Path targetFolder) throws MojoExecutionException {
-        PathMatcher matcher = path -> path.toString().endsWith(extension);
-        try (Stream<Path> found = Files.find(root, Integer.MAX_VALUE,
-                (path, attr) -> attr.isRegularFile() && matcher.matches(path))) {
-            found.forEach(source -> moveSource(source, targetFolder));
-        } catch (IOException exception) {
-            throw new MojoExecutionException(exception);
-        }
+    private void moveSources(File root, String extension, File targetFolder) {
+        Collection<File> matchExtension = FileUtils.listFiles(root, new String[]{extension}, true);
+        matchExtension.forEach(file -> moveSource(file, targetFolder));
     }
 
-    private void moveSource(Path sourceFile, Path targetFolder) {
+    private void moveSource(File sourceFile, File targetFolder) {
         try {
-            Files.createDirectories(targetFolder);
-            Files.move(sourceFile, targetFolder.resolve(sourceFile.getFileName()));
+            FileUtils.moveFileToDirectory(sourceFile, targetFolder, true);
         } catch (IOException e) {
             getLog().error("Could not move "
                     + sourceFile.toString() + " Reason " + e.getMessage());
+        }
+    }
+
+    private void forceDelete(File compiledFolder) throws MojoExecutionException {
+        try {
+            FileDeleteStrategy.FORCE.delete(compiledFolder);
+        } catch (IOException e) {
+            throw new MojoExecutionException(e);
         }
     }
 
