@@ -7,7 +7,7 @@
     <artifactId>smart-contract-maven-plugin-test</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Test Contract plugin</name>
+    <name>Test Override Contract Plugin</name>
 
     <build>
         <plugins>
@@ -19,11 +19,12 @@
                 <configuration>
                     <web3jLocation>.web3j-test</web3jLocation>
                     <inputContracts>
-                        <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
+                        <inputContract>src/test/resources/contracts/SampleImport.sol</inputContract>
                     </inputContracts>
-                    <solcArguments> --bin --abi --overwrite </solcArguments>
                     <generatedLocation>src/test/resources/contracts/out</generatedLocation>
-                    <abiOutput>src/test/resources/override</abiOutput>
+                    <solcArguments>
+                        --bin --base-path src/test/resources --include-path src/test/resources/contracts/parent
+                    </solcArguments>
                 </configuration>
             </plugin>
         </plugins>

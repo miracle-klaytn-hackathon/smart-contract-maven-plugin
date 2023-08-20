@@ -3,8 +3,11 @@ package io.github.miracle.hackathon;
 import org.web3j.sokt.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class ContractCompiler {
@@ -26,25 +29,31 @@ public class ContractCompiler {
         return new ContractCompiler(web3jLocation, releaseMetadata);
     }
 
-    public File compile(
-            List<SolidityFile> inputContracts,
-            Set<SolcArguments> arguments) throws IllegalStateException {
+    public File compile(List<String> arguments,
+                        List<SolidityFile> inputContracts) throws IOException, InterruptedException {
         SolcInstance contractCompiler = getCompilerInstance(inputContracts);
         String solcRootPath = getSolcRootPath(web3jLocation);
         if (contractCompiler.installed()) {
             LOGGER.info("Found a compatible Solidity Compiler (" +
                     releaseMetadata.getVersion() + ")" + " in " + solcRootPath);
-        } else {
-            LOGGER.info("This process will install a compatible Solidity Compiler (" +
+        } else if (contractCompiler.install()) {
+            LOGGER.info("Installed a compatible Solidity Compiler (" +
                     releaseMetadata.getVersion() + ")" + " in " + solcRootPath);
         }
-        SolcOutput compilationOutput = contractCompiler.execute(
-                arguments.toArray(new SolcArguments[0]));
+        List<String> contractPaths = new ArrayList<>();
+        for (SolidityFile contract: inputContracts) {
+            String contractPath = contract.getSourceFile().toAbsolutePath().toString();
+            contractPaths.add(contractPath);
+        }
+        SolcOutput compilationOutput = doCompile(
+                contractCompiler.getSolcFile().getAbsolutePath(),
+                arguments,
+                contractPaths);
         if (compilationOutput.getExitCode() != 0) {
             throw new IllegalStateException(compilationOutput.getStdErr());
         }
         LOGGER.fine(compilationOutput.getStdOut());
-        return getOutputPath(arguments);
+        return getOutputFile(arguments);
     }
 
     private SolcInstance getCompilerInstance(List<SolidityFile> inputContracts) {
@@ -70,57 +79,35 @@ public class ContractCompiler {
                 "solc").toString();
     }
 
-    public static Set<SolcArguments> parseArguments(String overrideArgs, String outputPath) {
-        if (overrideArgs != null) return getOverrideArguments(overrideArgs);
-        return getDefaultArguments(outputPath);
-    }
-
-    private static Set<SolcArguments> getOverrideArguments(String solcArguments) {
-        String[] args = solcArguments.split("\\s+");
-        return parseArguments(args);
-    }
-
-    private static Set<SolcArguments> parseArguments(String[] args) {
-        Set<SolcArguments> arguments = new HashSet<>();
-        Map<String, SolcArguments> knownArguments = getKnownArguments();
-        SolcArguments currentArgument = null;
-        for (String arg : args) {
-            if (arg.startsWith("--")
-                    && (currentArgument = knownArguments.get(arg)) != null) {
-                arguments.add(currentArgument);
-            } else if (currentArgument != null) {
-                currentArgument.param(() -> arg); // Add value to the argument
-                currentArgument = null;
+    private static File getOutputFile(List<String> compilerArguments) {
+        int argsLength = compilerArguments.size();
+        for (int i = 0; i < argsLength; i++) {
+            String argument = compilerArguments.get(i);
+            if ("-o".equals(argument) || "--output-dir".equals(argument)) {
+                if (i + 1 < argsLength) {
+                    return new File(compilerArguments.get(i + 1));
+                }
             }
         }
-        return arguments;
+        throw new IllegalArgumentException("Failed to get Output File");
     }
 
-    private static Map<String, SolcArguments> getKnownArguments() {
-        Map<String, SolcArguments> knownArguments = new HashMap<>();
-        for (SolcArguments solcArg : SolcArguments.values()) {
-            knownArguments.put(solcArg.getBaseArg(), solcArg);
-        }
-        return knownArguments;
+    protected SolcOutput doCompile(
+            String solcPath,
+            List<String> args,
+            List<String> sourcePaths) throws IOException, InterruptedException {
+        List<String> commands = new ArrayList<>();
+        commands.add(solcPath);
+        commands.addAll(args);
+        commands.addAll(sourcePaths);
+        ProcessBuilder processBuilder = new ProcessBuilder()
+                .command(commands);
+        Process process = processBuilder.start();
+        process.waitFor(30, TimeUnit.SECONDS);
+        return new SolcOutput(
+                process.exitValue(),
+                new String(process.getInputStream().readAllBytes()),
+                new String(process.getErrorStream().readAllBytes()));
     }
-
-    private static Set<SolcArguments> getDefaultArguments(String outputPath) {
-        return Set.of(
-                SolcArguments.BIN,
-                SolcArguments.ABI,
-                SolcArguments.OVERWRITE,
-                SolcArguments.OUTPUT_DIR.param(() -> outputPath));
-    }
-
-    private static File getOutputPath(Set<SolcArguments> compilerArguments) {
-        for (SolcArguments argument : compilerArguments) {
-            if (argument == SolcArguments.OUTPUT_DIR) {
-                assert argument.getParams() != null;
-                return new File(argument.getParams().invoke());
-            }
-        }
-        return null;
-    }
-
 
 }

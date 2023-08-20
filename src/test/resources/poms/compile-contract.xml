@@ -21,11 +21,8 @@
                     <inputContracts>
                         <inputContract>src/test/resources/contracts/Sample.sol</inputContract>
                     </inputContracts>
-                    <!-- Force default configuration https://stackoverflow.com/a/34611440 -->
-                    <generateBin>true</generateBin>
-                    <generateAbi>true</generateAbi>
-                    <!-- End -->
-                    <tempLocation>src/test/resources/contracts/temp</tempLocation>
+                    <solcArguments> --bin --abi --overwrite </solcArguments>
+                    <generatedLocation>src/test/resources/contracts/temp</generatedLocation>
                     <abiOutput>src/test/resources/contracts/out</abiOutput>
                     <binOutput>src/test/resources/contracts/out</binOutput>
                 </configuration>

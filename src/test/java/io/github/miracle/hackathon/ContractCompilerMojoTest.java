@@ -64,6 +64,16 @@ public class ContractCompilerMojoTest {
     }
 
     @Test
+    public void shouldCompileImport() throws Exception {
+        File file = new File(SRC_TEST_RESOURCES_POMS, "compile-import.xml");
+        assertTrue(file.exists());
+        SolidityCompilerMojo mojo = (SolidityCompilerMojo) mojoRule.lookupMojo("compile-contract", file);
+        assertNotNull(mojo);
+        mojo.execute();
+        assertContractCompiled(CONTRACT_OUT, 2);
+    }
+
+    @Test
     public void shouldOverrideCompilerVersion() throws Exception {
         File file = new File(SRC_TEST_RESOURCES_POMS, "override-solc-version.xml");
         assertTrue(file.exists());
